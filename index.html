@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f7f4ef">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CardioCalc">
+<title>CardioCalc</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* ===== RESET & ROOT ===== */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f7f4ef;
+  --ink:#1a1612;
+  --ink2:#4a4540;
+  --ink3:#8a8078;
+  --rule:#d8d0c4;
+  --accent:#c0392b;
+  --accent-light:rgba(192,57,43,0.08);
+  --green:#1a6b3a;
+  --green-light:rgba(26,107,58,0.10);
+  --amber:#8a5a00;
+  --amber-light:rgba(138,90,0,0.09);
+  --blue:#1a4a8a;
+  --blue-light:rgba(26,74,138,0.08);
+  --purple:#5b2d8a;
+  --purple-light:rgba(91,45,138,0.08);
+  --mono:'IBM Plex Mono',monospace;
+  --serif:'Libre Baskerville',serif;
+  --radius:14px;
+  --radius-sm:8px;
+}
+
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--mono)}
+
+/* ruled paper */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:repeating-linear-gradient(transparent,transparent 31px,var(--rule) 31px,var(--rule) 32px);
+  opacity:0.35;pointer-events:none;z-index:0
+}
+
+/* ===== SCREENS ===== */
+.screen{position:fixed;inset:0;overflow-y:auto;z-index:1;display:none}
+.screen.active{display:block}
+
+/* ===== HOME ===== */
+#home{padding:0 0 3rem}
+
+.home-header{
+  padding:2rem 1.25rem 1.5rem;
+  border-bottom:2px solid var(--ink);
+  margin-bottom:2rem;
+}
+.home-eyebrow{
+  font-size:10px;font-weight:500;letter-spacing:0.15em;
+  text-transform:uppercase;color:var(--ink3);margin-bottom:6px
+}
+.home-title{font-family:var(--serif);font-size:2rem;font-weight:700;line-height:1;letter-spacing:-0.01em}
+.home-title em{font-style:italic;color:var(--accent)}
+.home-sub{font-size:12px;color:var(--ink3);margin-top:6px}
+
+.cards-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:12px;padding:0 1.25rem
+}
+
+.calc-card{
+  background:#fff;border:1px solid var(--rule);
+  border-radius:var(--radius);padding:1.25rem 1rem;
+  cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;
+  position:relative;overflow:hidden;
+  display:flex;flex-direction:column;gap:10px;
+  -webkit-user-select:none;user-select:none
+}
+.calc-card:active{transform:scale(0.97)}
+.calc-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px
+}
+.calc-card.c-red::before{background:var(--accent)}
+.calc-card.c-green::before{background:var(--green)}
+.calc-card.c-blue::before{background:var(--blue)}
+.calc-card.c-purple::before{background:var(--purple)}
+
+.card-icon{font-size:1.6rem;line-height:1}
+.card-title{font-family:var(--serif);font-size:1rem;font-weight:700;line-height:1.2;color:var(--ink)}
+.card-desc{font-size:11px;color:var(--ink3);line-height:1.4}
+.card-tag{
+  display:inline-block;font-size:9px;font-weight:500;letter-spacing:0.08em;
+  text-transform:uppercase;padding:3px 7px;border-radius:100px;
+  margin-top:auto;align-self:flex-start
+}
+.c-red .card-tag{background:var(--accent-light);color:var(--accent)}
+.c-green .card-tag{background:var(--green-light);color:var(--green)}
+.c-blue .card-tag{background:var(--blue-light);color:var(--blue)}
+.c-purple .card-tag{background:var(--purple-light);color:var(--purple)}
+
+.home-footer{
+  text-align:center;font-size:10px;color:var(--ink3);
+  padding:2rem 1rem 0;line-height:1.7
+}
+
+/* ===== CALC SCREENS ===== */
+.calc-wrap{max-width:500px;margin:0 auto;padding:0 1.25rem 3rem}
+
+.calc-topbar{
+  display:flex;align-items:center;gap:12px;
+  padding:1rem 1.25rem;border-bottom:1px solid var(--rule);
+  margin-bottom:1.75rem;position:sticky;top:0;
+  background:var(--bg);z-index:10
+}
+.btn-back{
+  background:none;border:1px solid var(--rule);border-radius:var(--radius-sm);
+  font-family:var(--mono);font-size:12px;color:var(--ink2);
+  padding:6px 12px;cursor:pointer;white-space:nowrap;
+  transition:border-color 0.15s
+}
+.btn-back:hover{border-color:var(--ink2)}
+.topbar-title{font-family:var(--serif);font-size:1.1rem;font-weight:700;color:var(--ink)}
+
+/* ===== FORM ELEMENTS ===== */
+.sec-label{
+  font-size:9px;font-weight:500;letter-spacing:0.18em;
+  text-transform:uppercase;color:var(--ink3);margin-bottom:10px;display:block
+}
+.inp-group{margin-bottom:1.75rem}
+.inp-row{
+  display:flex;align-items:center;
+  border-bottom:1px solid var(--rule);padding:8px 0;gap:12px
+}
+.inp-row:first-of-type{border-top:1px solid var(--rule)}
+.inp-lbl{font-size:11px;font-weight:500;color:var(--ink2);min-width:90px;flex-shrink:0}
+.inp-lbl small{display:block;font-size:9px;color:var(--ink3);font-weight:400;margin-top:1px}
+input[type=number],select{
+  flex:1;background:transparent;border:none;outline:none;
+  font-family:var(--mono);font-size:16px;color:var(--ink);
+  text-align:right;-webkit-appearance:none;appearance:none;padding:2px 0
+}
+input[type=number]::placeholder{color:var(--ink3);opacity:0.5}
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+select{font-size:13px;text-align:right}
+.inp-unit{font-size:10px;color:var(--ink3);width:34px;text-align:right;flex-shrink:0}
+
+.radio-row{display:flex;align-items:center;gap:20px;border-bottom:1px solid var(--rule);padding:10px 0}
+.radio-row:first-of-type{border-top:1px solid var(--rule)}
+.radio-lbl{font-size:11px;font-weight:500;color:var(--ink2);flex:1}
+.radio-opts{display:flex;gap:16px}
+.radio-opts label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2);cursor:pointer}
+input[type=radio]{accent-color:var(--accent);width:16px;height:16px}
+
+.btn-calc{
+  width:100%;background:var(--ink);color:var(--bg);
+  border:none;border-radius:var(--radius-sm);
+  font-family:var(--mono);font-size:13px;font-weight:500;
+  padding:13px;cursor:pointer;margin-top:1rem;
+  transition:opacity 0.2s;letter-spacing:0.02em
+}
+.btn-calc:active{opacity:0.8}
+
+/* ===== RESULTS ===== */
+.res-group{margin:1.5rem 0}
+.res-row{
+  display:flex;align-items:center;
+  border-bottom:1px solid var(--rule);padding:10px 0;gap:8px
+}
+.res-row:first-of-type{border-top:1px solid var(--rule)}
+.res-row.best{
+  background:var(--accent-light);
+  margin:0 -8px;padding:10px 8px;border-radius:2px
+}
+.res-lbl{flex:1}
+.res-name{font-size:12px;font-weight:500;color:var(--ink)}
+.res-note{font-size:9px;color:var(--ink3);margin-top:2px}
+.res-val{
+  font-family:var(--mono);font-size:20px;font-weight:400;
+  color:var(--ink);letter-spacing:-0.02em;min-width:68px;text-align:right
+}
+.res-val.empty{color:var(--ink3);font-size:14px}
+.res-unit{font-size:10px;color:var(--ink3);width:34px;text-align:right;flex-shrink:0}
+.best-badge{
+  font-size:8px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--accent);background:var(--accent-light);border-radius:2px;
+  padding:2px 5px;white-space:nowrap
+}
+
+/* ===== ALERTS ===== */
+.alert-strip{
+  border-left:3px solid;padding:8px 10px;
+  font-size:11px;line-height:1.5;margin-bottom:1rem;display:none
+}
+.alert-strip.show{display:block}
+.alert-strip.warn{border-color:var(--amber);background:var(--amber-light);color:var(--amber)}
+.alert-strip.danger{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
+.alert-strip.ok{border-color:var(--green);background:var(--green-light);color:var(--green)}
+
+/* ===== HINT ===== */
+.hint{
+  font-size:10px;color:var(--ink3);line-height:1.6;
+  padding:10px 0;border-bottom:1px solid var(--rule);
+  margin-bottom:1.5rem;display:none;font-style:italic
+}
+.hint.show{display:block}
+
+/* ===== DERIVED ROW ===== */
+.derived-row{
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  font-size:11px;padding:8px 0;border-bottom:1px solid var(--rule);color:var(--ink3);
+  margin-bottom:1rem
+}
+.derived-row span b{color:var(--ink2);font-weight:500}
+
+/* ===== BADGE ===== */
+.badge{display:inline-block;padding:3px 9px;border-radius:100px;font-size:11px;font-weight:600}
+.badge.ok{background:var(--green-light);color:var(--green)}
+.badge.warn{background:var(--amber-light);color:var(--amber)}
+.badge.high{background:var(--accent-light);color:var(--accent)}
+
+/* ===== TABLE ===== */
+.ref-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.ref-table th{
+  text-align:left;padding:6px 8px;font-size:9px;font-weight:500;
+  letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);
+  border-bottom:1px solid var(--rule)
+}
+.ref-table td{padding:6px 8px;border-bottom:1px solid var(--rule);color:var(--ink2)}
+.ref-table tr:last-child td{border-bottom:none}
+
+/* ===== SELECT WRAPPER ===== */
+.sel-row{
+  display:flex;flex-direction:column;gap:6px;
+  border-bottom:1px solid var(--rule);padding:10px 0
+}
+.sel-row:first-of-type{border-top:1px solid var(--rule)}
+.sel-row label{font-size:11px;font-weight:500;color:var(--ink2)}
+.sel-row select{
+  text-align:left;font-size:13px;color:var(--ink);
+  border:1px solid var(--rule);border-radius:var(--radius-sm);
+  padding:8px 10px;background:var(--bg);width:100%
+}
+
+/* ===== CRITERIA CARDS ===== */
+.criteria-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:12px}
+.criteria-card{
+  background:#fff;border:1px solid var(--rule);border-radius:var(--radius-sm);
+  padding:12px;font-size:12px
+}
+.criteria-card h4{font-family:var(--serif);font-size:13px;margin-bottom:6px;color:var(--ink)}
+.criteria-card p{font-size:11px;color:var(--ink3);margin-bottom:8px;line-height:1.4}
+.criteria-card ul{padding-left:16px;color:var(--ink2);line-height:1.7}
+
+/* ===== BIBLIO MODAL ===== */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(0,0,0,0.45);
+  display:flex;align-items:flex-end;justify-content:center;
+  z-index:100;opacity:0;visibility:hidden;transition:opacity 0.25s,visibility 0.25s
+}
+.modal-bg.show{opacity:1;visibility:visible}
+.modal-box{
+  background:var(--bg);border-radius:var(--radius) var(--radius) 0 0;
+  padding:1.5rem 1.25rem 2rem;width:100%;max-width:520px;
+  max-height:70vh;overflow-y:auto;
+  transform:translateY(20px);transition:transform 0.25s
+}
+.modal-bg.show .modal-box{transform:translateY(0)}
+.modal-box h3{font-family:var(--serif);font-size:1.1rem;margin-bottom:1rem;color:var(--ink)}
+.modal-box ul{padding-left:16px;font-size:12px;color:var(--ink2);line-height:1.8}
+.btn-modal-close{
+  float:right;background:none;border:1px solid var(--rule);border-radius:var(--radius-sm);
+  font-family:var(--mono);font-size:11px;color:var(--ink2);padding:4px 10px;cursor:pointer
+}
+.btn-biblio{
+  background:none;border:1px solid var(--rule);border-radius:var(--radius-sm);
+  font-family:var(--mono);font-size:11px;color:var(--ink3);padding:6px 12px;
+  cursor:pointer;margin-top:1.5rem;transition:border-color 0.15s
+}
+.btn-biblio:hover{border-color:var(--ink2);color:var(--ink2)}
+
+/* ===== OFFLINE ===== */
+.offline{
+  position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:var(--bg);font-size:10px;
+  padding:5px 12px;border-radius:100px;display:none;z-index:200;white-space:nowrap
+}
+.offline.show{display:block}
+</style>
+</head>
+<body>
+
+<!-- ======================================================
+     HOME
+====================================================== -->
+<div class="screen active" id="home">
+  <header class="home-header">
+    <div class="home-eyebrow">Cardiología · Lipidología · Cardiometabolismo</div>
+    <div class="home-title">Cardio<em>Calc</em></div>
+    <div class="home-sub">Herramientas clínicas · uso offline · Dr. J. Giorgini</div>
+  </header>
+
+  <div class="cards-grid">
+    <div class="calc-card c-red" onclick="openCalc('ldl-formulas')">
+      <div class="card-icon">🧮</div>
+      <div class="card-title">LDL Fórmulas</div>
+      <div class="card-desc">Friedewald, Martin-Hopkins y Sampson con tabla completa de 180 factores</div>
+      <div class="card-tag">Lipidología</div>
+    </div>
+    <div class="calc-card c-blue" onclick="openCalc('ldl-reduccion')">
+      <div class="card-icon">💊</div>
+      <div class="card-title">Reducción LDL</div>
+      <div class="card-desc">Por estatina específica ± ezetimibe. Monoterapia y combinación</div>
+      <div class="card-tag">Tratamiento</div>
+    </div>
+    <div class="calc-card c-green" onclick="openCalc('ldl-ckd')">
+      <div class="card-icon">📉</div>
+      <div class="card-title">LDL Esperado & CKD</div>
+      <div class="card-desc">LDL según intensidad de tratamiento + eGFR esperado por edad</div>
+      <div class="card-tag">Prevención</div>
+    </div>
+    <div class="calc-card c-purple" onclick="openCalc('obesidad')">
+      <div class="card-icon">📐</div>
+      <div class="card-title">Obesidad</div>
+      <div class="card-desc">IMC, relación cintura/cadera (ICC) y cintura/talla (WHtR) con criterios diagnósticos</div>
+      <div class="card-tag">Cardiometabolismo</div>
+    </div>
+  </div>
+
+  <div class="home-footer">
+    Funciona sin conexión a internet · datos no salen del dispositivo<br>
+    Para uso clínico profesional · v2.0
+  </div>
+</div>
+
+<!-- ======================================================
+     CALC 1: LDL FÓRMULAS
+====================================================== -->
+<div class="screen" id="ldl-formulas">
+  <div class="calc-topbar">
+    <button class="btn-back" onclick="goHome()">← Volver</button>
+    <div class="topbar-title">LDL Fórmulas</div>
+  </div>
+  <div class="calc-wrap">
+    <div class="inp-group">
+      <span class="sec-label">Lípidos en ayunas</span>
+      <div class="inp-row">
+        <div class="inp-lbl">CT <small>Colesterol total</small></div>
+        <input type="number" id="f-ct" inputmode="decimal" placeholder="200" min="80" max="700">
+        <div class="inp-unit">mg/dL</div>
+      </div>
+      <div class="inp-row">
+        <div class="inp-lbl">HDL-C</div>
+        <input type="number" id="f-hdl" inputmode="decimal" placeholder="50" min="10" max="150">
+        <div class="inp-unit">mg/dL</div>
+      </div>
+      <div class="inp-row">
+        <div class="inp-lbl">TG <small>Triglicéridos</small></div>
+        <input type="number" id="f-tg" inputmode="decimal" placeholder="120" min="20" max="2000">
+        <div class="inp-unit">mg/dL</div>
+      </div>
+    </div>
+
+    <div class="derived-row" id="f-derived" style="display:none">
+      <span>Non-HDL-C: <b id="f-nonhdl">—</b> mg/dL</span>
+      <span>CT/HDL: <b id="f-ratio">—</b></span>
+    </div>
+
+    <div class="alert-strip" id="f-alert1"></div>
+    <div class="alert-strip" id="f-alert2"></div>
+
+    <div class="res-group" id="f-results" style="display:none">
+      <span class="sec-label">Resultados</span>
+      <div class="res-row" id="f-row-fw">
+        <div class="res-lbl">
+          <div class="res-name">Friedewald</div>
+          <div class="res-note">CT − HDL − TG/5</div>
+        </div>
+        <div class="res-val empty" id="f-val-fw">—</div>
+        <div class="res-unit">mg/dL</div>
+      </div>
+      <div class="res-row" id="f-row-mh">
+        <div class="res-lbl">
+          <div class="res-name">Martin-Hopkins</div>
+          <div class="res-note">factor ajustable 180 estratos</div>
+        </div>
+        <div class="res-val empty" id="f-val-mh">—</div>
+        <div class="res-unit">mg/dL</div>
+      </div>
+      <div class="res-row" id="f-row-sp">
+        <div class="res-lbl">
+          <div class="res-name">Sampson / NIH</div>
+          <div class="res-note">ecuación polinómica 2020</div>
+        </div>
+        <div class="res-val empty" id="f-val-sp">—</div>
+        <div class="res-unit">mg/dL</div>
+      </div>
+    </div>
+
+    <div class="hint" id="f-hint"></div>
+  </div>
+</div>
+
+<!-- ======================================================
+     CALC 2: LDL REDUCCIÓN (estatina específica)
+====================================================== -->
+<div class="screen" id="ldl-reduccion">
+  <div class="calc-topbar">
+    <button class="btn-back" onclick="goHome()">← Volver</button>
+    <div class="topbar-title">Reducción LDL</div>
+  </div>
+  <div class="calc-wrap">
+    <div class="inp-group">
+      <span class="sec-label">Datos</span>
+      <div class="inp-row">
+        <div class="inp-lbl">LDL basal</div>
+        <input type="number" id="r-ldl" inputmode="decimal" placeholder="135" min="1">
+        <div class="inp-unit">mg/dL</div>
+      </div>
+    </div>
+
+    <div class="inp-group">
+      <span class="sec-label">Estatina</span>
+      <div class="sel-row">
+        <label>Dosis de estatina</label>
+        <select id="r-statin">
+          <optgroup label="Alta intensidad (≥50% reducción)">
+            <option value="0.55">Atorvastatina 80 mg</option>
+            <option value="0.51">Atorvastatina 40 mg</option>
+            <option value="0.55">Rosuvastatina 40 mg</option>
+            <option value="0.52">Rosuvastatina 20 mg</option>
+          </optgroup>
+          <optgroup label="Moderada intensidad (30–49%)">
+            <option value="0.45">Atorvastatina 20 mg</option>
+            <option value="0.38">Atorvastatina 10 mg</option>
+            <option value="0.47">Rosuvastatina 10 mg</option>
+            <option value="0.40" selected>Rosuvastatina 5 mg</option>
+            <option value="0.41">Simvastatina 40 mg</option>
+            <option value="0.35">Simvastatina 20 mg</option>
+            <option value="0.38">Pravastatina 80 mg</option>
+            <option value="0.34">Pravastatina 40 mg</option>
+            <option value="0.32">Lovastatina 40 mg</option>
+          </optgroup>
+          <optgroup label="Baja intensidad (&lt;30%)">
+            <option value="0.28">Simvastatina 10 mg</option>
+            <option value="0.28">Pravastatina 20 mg</option>
+            <option value="0.22">Pravastatina 10 mg</option>
+            <option value="0.25">Lovastatina 20 mg</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+
+    <div class="alert-strip" id="r-alert"></div>
+
+    <div class="res-group" id="r-results" style="display:none">
+      <span class="sec-label">LDL esperado</span>
+      <div class="res-row">
+        <div class="res-lbl">
+          <div class="res-name">Monoterapia</div>
+          <div class="res-note">estatina sola</div>
+        </div>
+        <div class="res-val" id="r-mono">—</div>
+        <div class="res-unit">mg/dL</div>
+      </div>
+      <div class="res-row">
+        <div class="res-lbl">
+          <div class="res-name">+ Ezetimibe 10 mg</div>
+          <div class="res-note">reducción adicional ≈20%</div>
+        </div>
+        <div class="res-val" id="r-combo">—</div>
+        <div class="res-unit">mg/dL</div>
+      </div>
+    </div>
+
+    <button class="btn-biblio" onclick="document.getElementById('r-modal').classList.add('show')">Bibliografía</button>
+  </div>
+</div>
+
+<!-- biblio modal reduccion -->
+<div class="modal-bg" id="r-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal-box">
+    <button class="btn-modal-close" onclick="document.getElementById('r-modal').classList.remove('show')">cerrar</button>
+    <h3>Bibliografía</h3>
+    <ul>
+      <li><b>ACC/AHA 2018:</b> Grundy SM, et al. J Am Coll Cardiol. 2019;73(24):e285-e350.</li>
+      <li><b>ESC/EAS 2019:</b> Mach F, et al. Eur Heart J. 2020;41(1):111-188.</li>
+      <li><b>IMPROVE-IT:</b> Cannon CP, et al. N Engl J Med. 2015;372(25):2387-97.</li>
+      <li><b>Eficacia estatinas:</b> Law MR, et al. BMJ. 2003;326(7404):1423.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ======================================================
+     CALC 3: LDL ESPERADO & CKD
+====================================================== -->
+<div class="screen" id="ldl-ckd">
+  <div class="calc-topbar">
+    <button class="btn-back" onclick="goHome()">← Volver</button>
+    <div class="topbar-title">LDL Esperado & CKD</div>
+  </div>
+  <div class="calc-wrap">
+
+    <!-- LDL según estrategia -->
+    <div class="inp-group">
+      <span class="sec-label">LDL esperado según estrategia</span>
+      <div class="inp-row">
+        <div class="inp-lbl">LDL basal</div>
+        <input type="number" id="e-ldl" inputmode="decimal" placeholder="160" min="0">
+        <div class="inp-unit">mg/dL</div>
+      </div>
+      <div class="sel-row" style="border-top:1px solid var(--rule)">
+        <label>Intensidad del tratamiento</label>
+        <select id="e-estrategia">
+          <option value="" disabled selected>Seleccioná una opción</option>
+          <option value="0.30">Estatina intensidad moderada (≈30%)</option>
+          <option value="0.50">Estatina alta intensidad (≈50%)</option>
+          <option value="0.60">Alta intensidad + ezetimibe (≈60%)</option>
+          <option value="0.75">Combinaciones potentes / iPCSK9 (≈75%)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="res-group" id="e-result" style="display:none">
+      <div class="res-row">
+        <div class="res-lbl"><div class="res-name">LDL esperado</div></div>
+        <div class="res-val" id="e-ldl-val">—</div>
+        <div class="res-unit">mg/dL</div>
+      </div>
+    </div>
+    <div class="alert-strip" id="e-alert"></div>
+
+    <hr style="border:none;border-top:2px solid var(--rule);margin:2rem 0">
+
+    <!-- CKD -->
+    <div class="inp-group">
+      <span class="sec-label">CKD-EPI esperado por edad</span>
+      <div class="inp-row">
+        <div class="inp-lbl">Edad</div>
+        <input type="number" id="c-edad" inputmode="decimal" placeholder="65" min="18" max="100">
+        <div class="inp-unit">años</div>
+      </div>
+    </div>
+
+    <div class="res-group" id="c-result" style="display:none">
+      <div class="res-row">
+        <div class="res-lbl">
+          <div class="res-name">eGFR esperado</div>
+          <div class="res-note">regla rápida: 140 − edad</div>
+        </div>
+        <div class="res-val" id="c-egfr">—</div>
+        <div class="res-unit">mL/min</div>
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem">
+      <span class="sec-label">Tabla eGFR esperado por edad</span>
+      <table class="ref-table" id="ckd-table">
+        <thead><tr><th>Edad (años)</th><th>eGFR esperado (mL/min/1,73 m²)</th></tr></thead>
+        <tbody id="ckd-tbody"></tbody>
+      </table>
+      <div style="font-size:10px;color:var(--ink3);margin-top:8px;font-style:italic">
+        Regla rápida orientativa: eGFR ≈ 140 − edad. No reemplaza CKD-EPI formal.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================
+     CALC 4: OBESIDAD
+====================================================== -->
+<div class="screen" id="obesidad">
+  <div class="calc-topbar">
+    <button class="btn-back" onclick="goHome()">← Volver</button>
+    <div class="topbar-title">Obesidad</div>
+  </div>
+  <div class="calc-wrap">
+    <div class="inp-group">
+      <span class="sec-label">Medidas antropométricas</span>
+      <div class="inp-row">
+        <div class="inp-lbl">Peso</div>
+        <input type="number" id="o-peso" inputmode="decimal" placeholder="75" step="0.1" min="0">
+        <div class="inp-unit">kg</div>
+      </div>
+      <div class="inp-row">
+        <div class="inp-lbl">Talla</div>
+        <input type="number" id="o-talla" inputmode="decimal" placeholder="1.70" step="0.001" min="0">
+        <div class="inp-unit">m</div>
+      </div>
+      <div class="inp-row">
+        <div class="inp-lbl">Cintura</div>
+        <input type="number" id="o-cintura" inputmode="decimal" placeholder="90" step="0.1" min="0">
+        <div class="inp-unit">cm</div>
+      </div>
+      <div class="inp-row">
+        <div class="inp-lbl">Cadera</div>
+        <input type="number" id="o-cadera" inputmode="decimal" placeholder="100" step="0.1" min="0">
+        <div class="inp-unit">cm</div>
+      </div>
+      <div class="radio-row">
+        <div class="radio-lbl">Sexo <small style="color:var(--ink3)">(para ICC)</small></div>
+        <div class="radio-opts">
+          <label><input type="radio" name="o-sexo" value="M"> Masc.</label>
+          <label><input type="radio" name="o-sexo" value="F"> Fem.</label>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-calc" onclick="calcObesidad()">Calcular</button>
+
+    <div class="res-group" id="o-results" style="display:none;margin-top:1.5rem">
+      <span class="sec-label">Resultados</span>
+      <div class="res-row" id="o-imc-row">
+        <div class="res-lbl">
+          <div class="res-name">IMC</div>
+          <div id="o-imc-cat" class="res-note"></div>
+        </div>
+        <div class="res-val" id="o-imc-val">—</div>
+        <div class="res-unit">kg/m²</div>
+      </div>
+      <div class="res-row" id="o-icc-row">
+        <div class="res-lbl">
+          <div class="res-name">ICC</div>
+          <div id="o-icc-risk" class="res-note"></div>
+        </div>
+        <div class="res-val" id="o-icc-val">—</div>
+        <div class="res-unit"></div>
+      </div>
+      <div class="res-row" id="o-whtr-row">
+        <div class="res-lbl">
+          <div class="res-name">WHtR</div>
+          <div id="o-whtr-risk" class="res-note"></div>
+        </div>
+        <div class="res-val" id="o-whtr-val">—</div>
+        <div class="res-unit"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:1.75rem">
+      <span class="sec-label">Criterios diagnósticos</span>
+      <div class="criteria-grid">
+        <div class="criteria-card">
+          <h4>IMC (kg/m²)</h4>
+          <p>Cribado poblacional. Complementar con adiposidad y función orgánica.</p>
+          <ul>
+            <li>Bajo peso: &lt;18.5</li>
+            <li>Normal: 18.5–24.9</li>
+            <li>Sobrepeso: 25–29.9</li>
+            <li>Obesidad I: 30–34.9</li>
+            <li>Obesidad II: 35–39.9</li>
+            <li>Obesidad III: ≥40</li>
+          </ul>
+        </div>
+        <div class="criteria-card">
+          <h4>WHtR (cintura/talla)</h4>
+          <p>Sensible para riesgo cardiometabólico. Cintura (cm) / talla (cm).</p>
+          <ul>
+            <li>Normal: &lt;0.50</li>
+            <li>Riesgo elevado: 0.50–0.59</li>
+            <li>Riesgo muy alto: ≥0.60</li>
+          </ul>
+        </div>
+        <div class="criteria-card">
+          <h4>ICC (cintura/cadera)</h4>
+          <p>Distribución grasa visceral. Fenotipo androide = mayor riesgo CV.</p>
+          <ul>
+            <li>Varones: riesgo &gt;0.90</li>
+            <li>Mujeres: riesgo &gt;0.85</li>
+          </ul>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--ink3);margin-top:10px;font-style:italic;line-height:1.5">
+        Rubino F, et al. Lancet Diabetes Endocrinol. 2025 · OMS
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- offline badge -->
+<div class="offline" id="offline-badge">Sin conexión</div>
+
+<!-- ======================================================
+     JAVASCRIPT
+====================================================== -->
+<script>
+// ===== NAVIGATION =====
+function openCalc(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById(id).scrollTop = 0;
+}
+function goHome() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('home').classList.add('active');
+}
+
+// ===== MARTIN-HOPKINS TABLE =====
+const MH_TG = [0,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,145,150,155,160,165,170,175,180,185,190,195,200,210,220,230,240,250,260,270,280,290,300,310,320,330,340,350,360,370,380,390,400];
+const MH_NH = [0,100,130,160,190,220,250,310,400];
+const MH_F = [
+  [3.1,3.3,3.4,3.5,3.7,3.8,3.9,4.0,4.1],[3.3,3.5,3.6,3.7,3.9,4.0,4.1,4.2,4.3],
+  [3.5,3.7,3.9,4.0,4.1,4.3,4.4,4.5,4.6],[3.7,3.9,4.1,4.2,4.4,4.5,4.6,4.8,4.9],
+  [3.8,4.0,4.2,4.3,4.5,4.6,4.8,4.9,5.0],[3.9,4.1,4.3,4.5,4.6,4.8,4.9,5.1,5.2],
+  [4.0,4.2,4.4,4.6,4.7,4.9,5.0,5.2,5.3],[4.1,4.3,4.5,4.7,4.9,5.0,5.2,5.3,5.5],
+  [4.2,4.4,4.6,4.8,5.0,5.1,5.3,5.5,5.6],[4.3,4.5,4.7,4.9,5.1,5.2,5.4,5.6,5.8],
+  [4.3,4.6,4.8,5.0,5.2,5.3,5.5,5.7,5.9],[4.4,4.6,4.9,5.1,5.3,5.4,5.6,5.8,6.0],
+  [4.5,4.7,5.0,5.2,5.4,5.5,5.8,5.9,6.1],[4.5,4.8,5.0,5.2,5.4,5.6,5.8,6.0,6.2],
+  [4.6,4.8,5.1,5.3,5.5,5.7,5.9,6.1,6.3],[4.6,4.9,5.1,5.4,5.6,5.8,6.0,6.2,6.4],
+  [4.7,4.9,5.2,5.4,5.6,5.8,6.0,6.3,6.5],[4.7,5.0,5.3,5.5,5.7,5.9,6.2,6.4,6.6],
+  [4.8,5.0,5.3,5.5,5.8,6.0,6.2,6.5,6.7],[4.8,5.1,5.4,5.6,5.8,6.1,6.3,6.5,6.8],
+  [4.8,5.1,5.4,5.7,5.9,6.1,6.4,6.6,6.9],[4.9,5.2,5.4,5.7,5.9,6.2,6.4,6.7,6.9],
+  [4.9,5.2,5.5,5.7,6.0,6.2,6.5,6.7,7.0],[4.9,5.2,5.5,5.8,6.0,6.3,6.5,6.8,7.0],
+  [5.0,5.3,5.5,5.8,6.1,6.3,6.6,6.8,7.1],[5.0,5.3,5.6,5.8,6.1,6.3,6.6,6.9,7.1],
+  [5.0,5.3,5.6,5.9,6.1,6.4,6.6,6.9,7.2],[5.0,5.3,5.6,5.9,6.2,6.4,6.7,6.9,7.2],
+  [5.1,5.4,5.6,5.9,6.2,6.4,6.7,7.0,7.2],[5.1,5.4,5.7,5.9,6.2,6.5,6.7,7.0,7.3],
+  [5.1,5.4,5.7,6.0,6.2,6.5,6.8,7.0,7.3],[5.1,5.4,5.7,6.0,6.3,6.5,6.8,7.1,7.3],
+  [5.1,5.4,5.7,6.0,6.3,6.5,6.8,7.1,7.4],[5.1,5.4,5.7,6.0,6.3,6.6,6.8,7.1,7.4],
+  [5.1,5.4,5.7,6.0,6.3,6.6,6.9,7.1,7.4],[5.1,5.4,5.7,6.0,6.3,6.6,6.9,7.1,7.4],
+  [5.1,5.4,5.7,6.0,6.3,6.6,6.9,7.2,7.5],[5.1,5.4,5.8,6.1,6.3,6.6,6.9,7.2,7.5],
+  [5.2,5.5,5.8,6.1,6.4,6.6,6.9,7.2,7.5],[5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.2,7.5],
+  [5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.3,7.6],[5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.3,7.6],
+  [5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.3,7.6],[5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.3,7.6],
+  [5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.3,7.6],[5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.3,7.6],
+  [5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.3,7.6],[5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.3,7.6],
+  [5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.3,7.6],[5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.3,7.6],
+  [5.2,5.5,5.8,6.1,6.4,6.7,7.0,7.3,7.6]
+];
+function getMHFactor(tg, nh) {
+  let ti = MH_TG.length - 2;
+  for (let i = 0; i < MH_TG.length - 1; i++) { if (tg < MH_TG[i+1]) { ti = i; break; } }
+  let ni = MH_NH.length - 2;
+  for (let i = 0; i < MH_NH.length - 1; i++) { if (nh < MH_NH[i+1]) { ni = i; break; } }
+  return MH_F[Math.min(ti, MH_F.length-1)][Math.min(ni, 8)];
+}
+
+// ===== CALC 1: LDL FÓRMULAS =====
+function resetLDFFormulas() {
+  ['f-val-fw','f-val-mh','f-val-sp'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = '—'; el.className = 'res-val empty';
+  });
+  ['f-row-fw','f-row-mh','f-row-sp'].forEach(id => {
+    const row = document.getElementById(id);
+    row.classList.remove('best');
+    row.querySelectorAll('.best-badge').forEach(b => b.remove());
+  });
+  ['f-alert1','f-alert2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = ''; el.className = 'alert-strip';
+  });
+  document.getElementById('f-hint').className = 'hint';
+  document.getElementById('f-derived').style.display = 'none';
+  document.getElementById('f-results').style.display = 'none';
+}
+
+function calcLDLFormulas() {
+  resetLDFFormulas();
+  const ct = parseFloat(document.getElementById('f-ct').value);
+  const hdl = parseFloat(document.getElementById('f-hdl').value);
+  const tg = parseFloat(document.getElementById('f-tg').value);
+  if (isNaN(ct) || isNaN(hdl) || isNaN(tg)) return;
+  if (hdl >= ct || ct <= 0 || hdl <= 0 || tg <= 0) return;
+
+  const nh = ct - hdl;
+  document.getElementById('f-nonhdl').textContent = nh.toFixed(0);
+  document.getElementById('f-ratio').textContent = (ct/hdl).toFixed(2);
+  document.getElementById('f-derived').style.display = 'flex';
+
+  if (tg > 400) {
+    const a = document.getElementById('f-alert1');
+    a.textContent = 'TG > 400 mg/dL: todas las fórmulas no son confiables. Solicitar LDL directo.';
+    a.className = 'alert-strip danger show';
+    document.getElementById('f-results').style.display = 'block';
+    return;
+  }
+
+  const fw = ct - hdl - tg/5;
+  const f = getMHFactor(tg, nh);
+  const mh = ct - hdl - tg/f;
+  const sp = ct/0.948 - hdl/0.971 - (tg/8.56 + tg*nh/2140 - tg*tg/16100) - 9.44;
+
+  const setVal = (id, v) => {
+    const el = document.getElementById(id);
+    el.textContent = v < 0 ? '< 0' : v.toFixed(1);
+    el.className = 'res-val';
+  };
+  setVal('f-val-fw', fw); setVal('f-val-mh', mh); setVal('f-val-sp', sp);
+
+  if (tg >= 150) {
+    const a = document.getElementById('f-alert1');
+    a.textContent = 'TG ≥ 150 mg/dL: Friedewald puede subestimar el LDL real.';
+    a.className = 'alert-strip warn show';
+  }
+  if (tg >= 150 && fw < 70) {
+    const a = document.getElementById('f-alert2');
+    a.textContent = 'LDL borderline bajo con TG elevados: hasta 50% de reclasificación con Martin-Hopkins o Sampson (JAMA 2023).';
+    a.className = 'alert-strip warn show';
+  }
+
+  let bestId = 'f-row-fw';
+  let hintText = 'TG < 150 mg/dL — las tres fórmulas son equivalentes. Friedewald es el estándar histórico.';
+  if (tg >= 150 && tg <= 400) {
+    if (fw < 70) {
+      bestId = 'f-row-sp';
+      hintText = 'TG ≥ 150 + LDL bajo: Sampson/NIH mostró mayor precisión en pacientes con tratamiento intensivo (JLR 2021, n=17.077).';
+    } else {
+      bestId = 'f-row-mh';
+      hintText = 'TG ≥ 150 mg/dL: Martin-Hopkins superó a Friedewald en clasificación guía-basada (Global Heart 2023, n=5.051.467).';
+    }
+  }
+
+  const bestRow = document.getElementById(bestId);
+  bestRow.classList.add('best');
+  const badge = document.createElement('span');
+  badge.className = 'best-badge'; badge.textContent = 'usar esta';
+  bestRow.querySelector('.res-lbl').appendChild(badge);
+
+  const hint = document.getElementById('f-hint');
+  hint.textContent = hintText; hint.className = 'hint show';
+  document.getElementById('f-results').style.display = 'block';
+}
+
+['f-ct','f-hdl','f-tg'].forEach(id =>
+  document.getElementById(id).addEventListener('input', calcLDLFormulas)
+);
+
+// ===== CALC 2: LDL REDUCCIÓN =====
+function calcLDLReduccion() {
+  const ldl = parseFloat(document.getElementById('r-ldl').value);
+  const red = parseFloat(document.getElementById('r-statin').value);
+  const resDiv = document.getElementById('r-results');
+  const alert = document.getElementById('r-alert');
+  alert.className = 'alert-strip'; alert.textContent = '';
+  resDiv.style.display = 'none';
+  if (isNaN(ldl) || ldl <= 0) return;
+  const mono = ldl * (1 - red);
+  const combo = mono * 0.80;
+  document.getElementById('r-mono').textContent = mono.toFixed(1);
+  document.getElementById('r-combo').textContent = combo.toFixed(1);
+  resDiv.style.display = 'block';
+}
+['r-ldl','r-statin'].forEach(id =>
+  document.getElementById(id).addEventListener('input', calcLDLReduccion)
+);
+document.getElementById('r-statin').addEventListener('change', calcLDLReduccion);
+
+// ===== CALC 3: LDL ESPERADO & CKD =====
+function calcEstrategia() {
+  const ldl = parseFloat(document.getElementById('e-ldl').value);
+  const red = parseFloat(document.getElementById('e-estrategia').value);
+  const res = document.getElementById('e-result');
+  const alert = document.getElementById('e-alert');
+  res.style.display = 'none';
+  alert.className = 'alert-strip'; alert.textContent = '';
+  if (isNaN(ldl) || isNaN(red) || ldl <= 0) return;
+  const esperado = ldl * (1 - red);
+  document.getElementById('e-ldl-val').textContent = esperado.toFixed(1);
+  res.style.display = 'block';
+}
+['e-ldl','e-estrategia'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', calcEstrategia);
+  el.addEventListener('change', calcEstrategia);
+});
+
+function calcCKD() {
+  const edad = parseInt(document.getElementById('c-edad').value);
+  const res = document.getElementById('c-result');
+  res.style.display = 'none';
+  if (isNaN(edad) || edad <= 0) return;
+  let ckd = 140 - edad;
+  if (ckd > 130) ckd = 130;
+  if (ckd < 40) ckd = 40;
+  document.getElementById('c-egfr').textContent = ckd;
+  res.style.display = 'block';
+}
+document.getElementById('c-edad').addEventListener('input', calcCKD);
+
+function buildCKDTable() {
+  const tbody = document.getElementById('ckd-tbody');
+  for (let edad = 20; edad <= 90; edad += 5) {
+    let ckd = 140 - edad;
+    if (ckd > 130) ckd = 130;
+    if (ckd < 40) ckd = 40;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${edad}</td><td>${ckd}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+// ===== CALC 4: OBESIDAD =====
+function calcObesidad() {
+  const peso = parseFloat(document.getElementById('o-peso').value);
+  const talla = parseFloat(document.getElementById('o-talla').value);
+  const cintura = parseFloat(document.getElementById('o-cintura').value);
+  const cadera = parseFloat(document.getElementById('o-cadera').value);
+  const sexo = document.querySelector('input[name="o-sexo"]:checked')?.value || null;
+  const res = document.getElementById('o-results');
+
+  let anyResult = false;
+
+  // IMC
+  if (!isNaN(peso) && !isNaN(talla) && peso > 0 && talla > 0) {
+    const imc = peso / (talla * talla);
+    let cat = '';
+    if (imc < 18.5) cat = 'Bajo peso';
+    else if (imc < 25) cat = 'Normal';
+    else if (imc < 30) cat = 'Sobrepeso';
+    else if (imc < 35) cat = 'Obesidad clase I';
+    else if (imc < 40) cat = 'Obesidad clase II';
+    else cat = 'Obesidad clase III';
+    document.getElementById('o-imc-val').textContent = imc.toFixed(1);
+    document.getElementById('o-imc-cat').textContent = cat;
+    document.getElementById('o-imc-row').style.display = 'flex';
+    anyResult = true;
+  } else {
+    document.getElementById('o-imc-row').style.display = 'none';
+  }
+
+  // ICC
+  if (!isNaN(cintura) && !isNaN(cadera) && cintura > 0 && cadera > 0) {
+    const icc = cintura / cadera;
+    let riesgo = 'sin corte definido (sexo no indicado)';
+    if (sexo) {
+      const lim = sexo === 'M' ? 0.90 : 0.85;
+      riesgo = icc > lim ? 'riesgo aumentado' : 'riesgo normal';
+    }
+    document.getElementById('o-icc-val').textContent = icc.toFixed(2);
+    document.getElementById('o-icc-risk').textContent = riesgo;
+    document.getElementById('o-icc-row').style.display = 'flex';
+    anyResult = true;
+  } else {
+    document.getElementById('o-icc-row').style.display = 'none';
+  }
+
+  // WHtR
+  if (!isNaN(cintura) && !isNaN(talla) && cintura > 0 && talla > 0) {
+    const whtr = cintura / (talla * 100);
+    let riesgo = 'riesgo normal';
+    if (whtr >= 0.60) riesgo = 'riesgo muy alto';
+    else if (whtr >= 0.50) riesgo = 'riesgo elevado';
+    document.getElementById('o-whtr-val').textContent = whtr.toFixed(2);
+    document.getElementById('o-whtr-risk').textContent = riesgo;
+    document.getElementById('o-whtr-row').style.display = 'flex';
+    anyResult = true;
+  } else {
+    document.getElementById('o-whtr-row').style.display = 'none';
+  }
+
+  res.style.display = anyResult ? 'block' : 'none';
+}
+
+// ===== OFFLINE =====
+window.addEventListener('offline', () => document.getElementById('offline-badge').classList.add('show'));
+window.addEventListener('online', () => document.getElementById('offline-badge').classList.remove('show'));
+if (!navigator.onLine) document.getElementById('offline-badge').classList.add('show');
+
+// ===== SERVICE WORKER =====
+if ('serviceWorker' in navigator) {
+  const sw = `const C='cc-v2';self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))});`;
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});
+}
+
+// ===== INIT =====
+buildCKDTable();
+</script>
+</body>
+</html>
