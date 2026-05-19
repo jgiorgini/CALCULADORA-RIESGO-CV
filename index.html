@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#f7f4ef">
 <link rel="manifest" href="./manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -333,6 +333,11 @@ input[type=radio]{accent-color:var(--accent);width:16px;height:16px}
   <div class="home-footer">
     Funciona sin conexión a internet · datos no salen del dispositivo<br>
     Para uso clínico profesional · v2.0
+  </div>
+
+  <div id="install-wrap" style="display:none; padding: 0 1.25rem 1.5rem;">
+    <button id="btn-install" style="width:100%; background:var(--ink); color:var(--bg); border:none; border-radius:var(--radius-sm); font-family:var(--mono); font-size:13px; font-weight:500; padding:14px; cursor:pointer; letter-spacing:0.02em;">⬇ Instalar CardioCalc en este dispositivo</button>
+    <div style="font-size:10px; color:var(--ink3); text-align:center; margin-top:6px;">Funciona sin internet una vez instalada</div>
   </div>
 </div>
 
@@ -952,6 +957,24 @@ function calcObesidad() {
 
   res.style.display = anyResult ? 'block' : 'none';
 }
+
+// ===== PWA INSTALL =====
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-wrap').style.display = 'block';
+});
+document.getElementById('btn-install').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install-wrap').style.display = 'none';
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-wrap').style.display = 'none';
+});
 
 // ===== OFFLINE =====
 window.addEventListener('offline', () => document.getElementById('offline-badge').classList.add('show'));
