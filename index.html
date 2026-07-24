@@ -313,7 +313,7 @@ input[type=radio]{accent-color:var(--accent);width:16px;height:16px}
     <div class="calc-card c-blue" onclick="openCalc('ldl-reduccion')">
       <div class="card-icon">💊</div>
       <div class="card-title">Reducción LDL</div>
-      <div class="card-desc">Por estatina específica ± ezetimibe. Monoterapia y combinación</div>
+      <div class="card-desc">Estatina ± ezetimibe ± ácido bempedoico. Mono, doble y triple terapia</div>
       <div class="card-tag">Tratamiento</div>
     </div>
     <div class="calc-card c-green" onclick="openCalc('ldl-ckd')">
@@ -432,6 +432,7 @@ input[type=radio]{accent-color:var(--accent);width:16px;height:16px}
       <div class="sel-row">
         <label>Dosis de estatina</label>
         <select id="r-statin">
+          <option value="0">Sin estatina</option>
           <optgroup label="Alta intensidad (≥50% reducción)">
             <option value="0.55">Atorvastatina 80 mg</option>
             <option value="0.51">Atorvastatina 40 mg</option>
@@ -459,25 +460,44 @@ input[type=radio]{accent-color:var(--accent);width:16px;height:16px}
       </div>
     </div>
 
+    <div class="inp-group">
+      <span class="sec-label">Agentes no estatínicos</span>
+      <div class="radio-row">
+        <div class="radio-lbl">+ Ezetimibe 10 mg <small style="color:var(--ink3)">≈20% adicional</small></div>
+        <div class="radio-opts">
+          <label><input type="checkbox" id="r-eze"></label>
+        </div>
+      </div>
+      <div class="radio-row">
+        <div class="radio-lbl">+ Ácido bempedoico 180 mg <small style="color:var(--ink3)">≈18% adicional</small></div>
+        <div class="radio-opts">
+          <label><input type="checkbox" id="r-bemp"></label>
+        </div>
+      </div>
+    </div>
+
     <div class="alert-strip" id="r-alert"></div>
 
     <div class="res-group" id="r-results" style="display:none">
-      <span class="sec-label">LDL esperado</span>
+      <span class="sec-label" id="r-tier">Estrategia seleccionada</span>
       <div class="res-row">
         <div class="res-lbl">
-          <div class="res-name">Monoterapia</div>
-          <div class="res-note">estatina sola</div>
-        </div>
-        <div class="res-val" id="r-mono">—</div>
-        <div class="res-unit">mg/dL</div>
-      </div>
-      <div class="res-row">
-        <div class="res-lbl">
-          <div class="res-name">+ Ezetimibe 10 mg</div>
-          <div class="res-note">reducción adicional ≈20%</div>
+          <div class="res-name" id="r-scheme">—</div>
+          <div class="res-note" id="r-scheme-red">—</div>
         </div>
         <div class="res-val" id="r-combo">—</div>
         <div class="res-unit">mg/dL</div>
+      </div>
+    </div>
+
+    <div style="margin-top:1.75rem">
+      <span class="sec-label">Comparación de estrategias</span>
+      <table class="ref-table" id="r-table">
+        <thead><tr><th>Estrategia</th><th>LDL esperado</th><th>Reducción</th></tr></thead>
+        <tbody id="r-tbody"></tbody>
+      </table>
+      <div style="font-size:10px;color:var(--ink3);margin-top:8px;font-style:italic">
+        Modelo multiplicativo: cada agente reduce el LDL remanente en su porcentaje independiente (no estrictamente aditivo). Cambiá la dosis de estatina arriba para recalcular toda la tabla.
       </div>
     </div>
 
@@ -493,8 +513,12 @@ input[type=radio]{accent-color:var(--accent);width:16px;height:16px}
     <ul>
       <li><b>ACC/AHA 2018:</b> Grundy SM, et al. J Am Coll Cardiol. 2019;73(24):e285-e350.</li>
       <li><b>ESC/EAS 2019:</b> Mach F, et al. Eur Heart J. 2020;41(1):111-188.</li>
-      <li><b>IMPROVE-IT:</b> Cannon CP, et al. N Engl J Med. 2015;372(25):2387-97.</li>
+      <li><b>IMPROVE-IT (ezetimibe):</b> Cannon CP, et al. N Engl J Med. 2015;372(25):2387-97.</li>
       <li><b>Eficacia estatinas:</b> Law MR, et al. BMJ. 2003;326(7404):1423.</li>
+      <li><b>CLEAR Harmony (bempedoico + estatina):</b> Ray KK, et al. N Engl J Med. 2019;380(11):1022-1032.</li>
+      <li><b>CLEAR Wisdom (bempedoico + estatina):</b> Goldberg AC, et al. JAMA. 2019;322(18):1780-1788.</li>
+      <li><b>CLEAR Serenity (bempedoico monoterapia):</b> Laufs U, et al. J Am Heart Assoc. 2019;8(7):e011662.</li>
+      <li><b>CLEAR Tranquility (bempedoico + ezetimibe):</b> Ballantyne CM, et al. Am J Prev Cardiol. 2020;1:100024.</li>
     </ul>
   </div>
 </div>
@@ -833,21 +857,86 @@ function calcLDLFormulas() {
 );
 
 // ===== CALC 2: LDL REDUCCIÓN =====
+const EZE_R = 0.20;   // ezetimibe 10 mg: reducción independiente ≈20%
+const BEMP_R = 0.18;  // ácido bempedoico 180 mg: reducción independiente ≈18%
+
+// LDL esperado combinando reducciones de forma multiplicativa sobre el remanente
+function ldlEsperado(ldlBasal, statinR, eze, bemp) {
+  let factor = 1 - statinR;
+  if (eze) factor *= (1 - EZE_R);
+  if (bemp) factor *= (1 - BEMP_R);
+  return ldlBasal * factor;
+}
+
+function schemeName(statinLabel, statinR, eze, bemp) {
+  const parts = [];
+  if (statinR > 0) parts.push(statinLabel);
+  if (eze) parts.push('Ezetimibe 10 mg');
+  if (bemp) parts.push('Ác. bempedoico 180 mg');
+  return parts.length ? parts.join(' + ') : 'Sin tratamiento';
+}
+
+function tierLabel(statinR, eze, bemp) {
+  const n = (statinR > 0 ? 1 : 0) + (eze ? 1 : 0) + (bemp ? 1 : 0);
+  if (n <= 1) return 'Monoterapia';
+  if (n === 2) return 'Terapia doble';
+  return 'Terapia triple';
+}
+
 function calcLDLReduccion() {
   const ldl = parseFloat(document.getElementById('r-ldl').value);
-  const red = parseFloat(document.getElementById('r-statin').value);
+  const statinSel = document.getElementById('r-statin');
+  const red = parseFloat(statinSel.value);
+  const eze = document.getElementById('r-eze').checked;
+  const bemp = document.getElementById('r-bemp').checked;
   const resDiv = document.getElementById('r-results');
   const alert = document.getElementById('r-alert');
   alert.className = 'alert-strip'; alert.textContent = '';
   resDiv.style.display = 'none';
+  document.getElementById('r-tbody').innerHTML = '';
   if (isNaN(ldl) || ldl <= 0) return;
-  const mono = ldl * (1 - red);
-  const combo = mono * 0.80;
-  document.getElementById('r-mono').textContent = mono.toFixed(1);
-  document.getElementById('r-combo').textContent = combo.toFixed(1);
+
+  const statinLabel = statinSel.options[statinSel.selectedIndex].text;
+  const esperado = ldlEsperado(ldl, red, eze, bemp);
+  const reduccionPct = (1 - esperado / ldl) * 100;
+
+  document.getElementById('r-tier').textContent = tierLabel(red, eze, bemp);
+  document.getElementById('r-scheme').textContent = schemeName(statinLabel, red, eze, bemp);
+  document.getElementById('r-scheme-red').textContent = 'reducción total ≈' + reduccionPct.toFixed(0) + '%';
+  document.getElementById('r-combo').textContent = esperado.toFixed(1);
   resDiv.style.display = 'block';
+
+  buildReduccionTable(ldl, statinLabel, red, eze, bemp);
 }
-['r-ldl','r-statin'].forEach(id =>
+
+function reduccionRow(ldl, label, statinR, eze, bemp, isCurrent) {
+  const esperado = ldlEsperado(ldl, statinR, eze, bemp);
+  const pct = (1 - esperado / ldl) * 100;
+  const tr = document.createElement('tr');
+  if (isCurrent) tr.style.background = 'var(--accent-light)';
+  tr.innerHTML = `<td>${label}</td><td>${esperado.toFixed(1)} mg/dL</td><td>${pct.toFixed(0)}%</td>`;
+  return tr;
+}
+
+function buildReduccionTable(ldl, statinLabel, statinR, eze, bemp) {
+  const tbody = document.getElementById('r-tbody');
+  tbody.innerHTML = '';
+  const rows = [
+    { label: 'Ezetimibe solo', r: 0, e: true, b: false },
+    { label: 'Ácido bempedoico solo', r: 0, e: false, b: true },
+    { label: 'Ezetimibe + bempedoico (sin estatina)', r: 0, e: true, b: true },
+    { label: statinR > 0 ? statinLabel + ' sola' : 'Sin estatina', r: statinR, e: false, b: false },
+    { label: statinLabel + ' + Ezetimibe', r: statinR, e: true, b: false },
+    { label: statinLabel + ' + Bempedoico', r: statinR, e: false, b: true },
+    { label: statinLabel + ' + Ezetimibe + Bempedoico', r: statinR, e: true, b: true }
+  ];
+  rows.forEach(row => {
+    const isCurrent = row.r === statinR && row.e === eze && row.b === bemp;
+    tbody.appendChild(reduccionRow(ldl, row.label, row.r, row.e, row.b, isCurrent));
+  });
+}
+
+['r-ldl','r-statin','r-eze','r-bemp'].forEach(id =>
   document.getElementById(id).addEventListener('input', calcLDLReduccion)
 );
 document.getElementById('r-statin').addEventListener('change', calcLDLReduccion);
